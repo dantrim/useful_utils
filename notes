@@ -1,0 +1,110 @@
+#!/usr/bin/env python
+
+from optparse import OptionParser
+import operator
+import time
+import datetime
+import os
+import sys
+import subprocess
+
+def list_notes_by_ctime(directory) :
+
+    ctime_dict = {}
+
+    for dirname, subdirs, files in os.walk(directory) :
+        for fname in files :
+            full_path = os.path.join(dirname, fname)
+            mtime = os.stat(full_path).st_mtime
+            ctime_dict[fname] = mtime
+    ctime_dict = sorted(ctime_dict.items(), key = operator.itemgetter(1))
+    if len(ctime_dict) == 0 :
+        print "notedir empty"
+        return
+    max_fname_length = max([len(s[0]) for s in ctime_dict])
+    for ifile, file_pair in enumerate(ctime_dict) :
+        ctime = file_pair[1]
+        cs = datetime.datetime.fromtimestamp(ctime).strftime('%Y-%m-%d %H:%M:%S')
+        print "[%03d] %s : %s" % ( ifile, cs, file_pair[0].ljust(max_fname_length + 2)) 
+
+def get_most_recent(directory) :
+
+    max_mtime = 0
+    max_file = ''
+    max_dir = ''
+    for dirname, subdirs, files in os.walk(directory) :
+        for fname in files :
+            full_path = os.path.join(dirname, fname)
+            mtime = os.stat(full_path).st_mtime
+            if mtime > max_mtime :
+                max_mtime = mtime
+                max_dir = dirname
+                max_file = fname
+    max_file = os.path.join(max_dir, max_file)
+    return max_file
+
+def open_last_note(directory) :
+
+    most_recent_file = get_most_recent(directory)
+    if most_recent_file == "" :
+        print "notedir empty, no last file to open"
+        return
+    subprocess.call("vim %s" % most_recent_file, shell = True)
+
+def make_new_note(directory, timestamp_str = "", suffix = "") :
+
+    if not directory.endswith('/') : directory += "/"
+    note_name = "%s%s_note" % (directory, timestamp_str)
+    if suffix != "" :
+        note_name += "_%s" % suffix
+    note_name_test = note_name + ".txt"
+
+    if os.path.isfile(note_name_test) :
+        print "file '%s' exists already in notedir" % (note_name_test)
+        return
+    note_name = note_name_test
+    subprocess.call("vim %s" % note_name, shell = True)
+
+def main() :
+
+    parser = OptionParser()
+    parser.add_option("-n", "--new", action = "store_true", default = False, help = "Create a new note")
+    parser.add_option("-s", "--suffix", default = "", help = "Add a descriptive text to note name")
+    parser.add_option("--list", action = "store_true", default = False, help = "List all files by creation date")
+    parser.add_option("--open-list", action = "store_true", default = False, help = "Open up the notes directory to select a note to open")
+    parser.add_option("--last-open", action = "store_true", default = False, help = "Open the last edited set of notes")
+    (options, args) = parser.parse_args()
+    list_by_ctime = options.list
+    last_note = options.last_open
+    new_note = options.new
+    suffix = options.suffix
+    open_list = options.open_list
+
+
+    ts = time.time()
+    ts = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d')
+
+    cwd = os.getcwd() # location of caller
+    notedir = "/Users/dantrim/notes/"
+
+    if not os.path.isdir(notedir) :
+        os.mkdir(notedir)
+
+    if list_by_ctime :
+        list_notes_by_ctime(notedir)
+        sys.exit()
+
+    if new_note :
+        make_new_note(notedir, ts, suffix = suffix)
+        sys.exit()
+
+    if open_list :
+        subprocess.call("vim %s" % notedir, shell = True)
+        sys.exit()
+
+    if last_note : 
+        open_last_note(notedir)
+        sys.exit()
+
+if __name__ == "__main__" :
+    main()
