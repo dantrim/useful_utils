@@ -8,12 +8,21 @@ import os
 import sys
 import subprocess
 
+def ignore_file(filename) :
+
+    ignores = [".swp", ".swo", ".swk", ".swm", ".swn"]
+    for ignore in ignores :
+        if ignore in filename :
+            return True
+    return False
+
 def list_notes_by_ctime(directory) :
 
     ctime_dict = {}
 
     for dirname, subdirs, files in os.walk(directory) :
         for fname in files :
+            if ignore_file(fname) : continue
             full_path = os.path.join(dirname, fname)
             mtime = os.stat(full_path).st_mtime
             ctime_dict[fname] = mtime
