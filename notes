@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
 from optparse import OptionParser
+import glob
 import operator
 import time
 import datetime
 import os
 import sys
+import re
 import subprocess
 
 def ignore_file(filename) :
@@ -15,6 +17,48 @@ def ignore_file(filename) :
         if ignore in filename :
             return True
     return False
+
+def list_notes_by_date(directory) :
+
+    # expects all notes of form XXXX_XX_XX_*
+
+    date_dict = {} # [ date : [notes] ]
+
+    if not directory.endswith("/") :
+        directory += "/"
+    all_notes = glob.glob("%s*.txt" % directory) # should realy move to using regex
+    all_dates = []
+    for note in all_notes :
+        note_bare = note.split("/")[-1].strip()
+        note_bare = '_'.join(note_bare.split("_")[:3])
+        if note_bare not in all_dates :
+            all_dates.append(note_bare)
+    # sort earliest to latest
+    all_dates_sorted = {}
+    for date in all_dates :
+        date_dash = date.replace("_","-")
+        creation_time = time.mktime(datetime.datetime.strptime(date_dash, "%Y-%m-%d").timetuple())
+        all_dates_sorted[date] = creation_time
+
+    all_dates_sorted = sorted(all_dates_sorted.items(), key = operator.itemgetter(1))
+    
+    n_total_count = 0
+    for date_sorted in all_dates_sorted :
+        creation_time_string = date_sorted[0]
+        notes_for_this_date = {} # { name : modification time }
+        for note in all_notes :
+            if creation_time_string not in note : continue 
+            mtime = os.stat(note).st_mtime
+            notes_for_this_date[note] = mtime
+        notes_for_this_date = sorted(notes_for_this_date.items(), key = operator.itemgetter(1))
+        n_for_this_date_count = 0
+        print 16 * '- '
+        for sorted_note in notes_for_this_date :
+            cs = datetime.datetime.fromtimestamp(sorted_note[1]).strftime('%Y-%m-%d %H:%M:%S')
+            fname_print = sorted_note[0].split('/')[-1]
+            print "[%03d] (%02d) %s : %s" % ( n_total_count, n_for_this_date_count, cs, fname_print )
+            n_for_this_date_count += 1
+            n_total_count += 1
 
 def list_notes_by_ctime(directory) :
 
@@ -79,11 +123,13 @@ def main() :
     parser = OptionParser()
     parser.add_option("-n", "--new", action = "store_true", default = False, help = "Create a new note")
     parser.add_option("-s", "--suffix", default = "", help = "Add a descriptive text to note name")
-    parser.add_option("--list", action = "store_true", default = False, help = "List all files by creation date")
+    parser.add_option("--list", action = "store_true", default = False, help = "List all files by modification time")
+    parser.add_option("--list-by-date", action = "store_true", default = False, help = "List all files in order of date")
     parser.add_option("--open-list", action = "store_true", default = False, help = "Open up the notes directory to select a note to open")
     parser.add_option("--last-open", action = "store_true", default = False, help = "Open the last edited set of notes")
     (options, args) = parser.parse_args()
     list_by_ctime = options.list
+    list_by_date = options.list_by_date
     last_note = options.last_open
     new_note = options.new
     suffix = options.suffix
@@ -101,6 +147,10 @@ def main() :
 
     if list_by_ctime :
         list_notes_by_ctime(notedir)
+        sys.exit()
+
+    if list_by_date :
+        list_notes_by_date(notedir)
         sys.exit()
 
     if new_note :
