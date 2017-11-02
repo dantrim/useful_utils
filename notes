@@ -124,6 +124,14 @@ def open_note_by_str(directory, string_to_look_for) :
         directory += "/"
     potential_files = glob.glob("%s*%s*.txt" % (directory, string_to_look_for))
 
+        
+    if string_to_look_for == "TODO" and len(potential_files) > 1 :
+        new_files = []
+        for f in potential_files :
+            if "COMPLETE" in f : continue
+            new_files.append(f)
+        potential_files = new_files
+
     if len(potential_files) == 0 :
         print "no files match '%s'" % string_to_look_for
         return
