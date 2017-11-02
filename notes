@@ -118,6 +118,22 @@ def make_new_note(directory, timestamp_str = "", suffix = "") :
     note_name = note_name_test
     subprocess.call("vim %s" % note_name, shell = True)
 
+def open_note_by_str(directory, string_to_look_for) :
+
+    if not directory.endswith("/") :
+        directory += "/"
+    potential_files = glob.glob("%s*%s*.txt" % (directory, string_to_look_for))
+
+    if len(potential_files) == 0 :
+        print "no files match '%s'" % string_to_look_for
+        return
+    elif len(potential_files) > 1 :
+        print "more than one file matches '%s'" % string_to_look_for
+        return
+    else :
+        file_to_open = potential_files[0]
+        subprocess.call("vim %s" % file_to_open, shell = True)
+
 def main() :
 
     parser = OptionParser()
@@ -127,6 +143,7 @@ def main() :
     parser.add_option("--list-by-date", action = "store_true", default = False, help = "List all files in order of date")
     parser.add_option("--open-list", action = "store_true", default = False, help = "Open up the notes directory to select a note to open")
     parser.add_option("--last-open", action = "store_true", default = False, help = "Open the last edited set of notes")
+    parser.add_option("-o", "--open", default = "", help = "Select note by string")
     (options, args) = parser.parse_args()
     list_by_ctime = options.list
     list_by_date = options.list_by_date
@@ -134,6 +151,7 @@ def main() :
     new_note = options.new
     suffix = options.suffix
     open_list = options.open_list
+    open_by_str = options.open
 
 
     ts = time.time()
@@ -163,6 +181,10 @@ def main() :
 
     if last_note : 
         open_last_note(notedir)
+        sys.exit()
+
+    if open_by_str != "" :
+        open_note_by_str(notedir, open_by_str)
         sys.exit()
 
 if __name__ == "__main__" :
