@@ -60,6 +60,8 @@ def list_notes_by_date(directory) :
             n_for_this_date_count += 1
             n_total_count += 1
 
+    print 16 * '- '
+
 def list_notes_by_ctime(directory) :
 
     ctime_dict = {}
